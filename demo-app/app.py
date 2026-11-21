@@ -39,3 +39,11 @@ def me():
     # Auth bypass: token signature never checked
     claims = jwt.decode(token, options={"verify_signature": False})
     return {"user": claims.get("sub")}
+
+
+@app.route("/webhook/test", methods=["POST"])
+def test_webhook():
+    # NEW SSRF: pings whatever callback URL the caller supplies
+    callback = request.form["callback_url"]
+    resp = requests.post(callback, json={"ping": True}, timeout=5)
+    return {"status": resp.status_code}
