@@ -23,7 +23,14 @@ with false positives.
    with `--baseline-commit`, so only issues *introduced by that PR* count, and only
    `ERROR` severity (high-confidence rules) fails the check. `WARNING` rules such as
    `pickle-loads` stay advisory until their false-positive rate is known.
-4. **Supply chain.** `pip-audit` checks dependencies against known CVEs and the
+4. **Exploitability triage (advisory).** On pull requests, Claude Code reads the
+   SARIF and the code around each finding and ranks the findings by how exploitable
+   they are (reachable entry point, attacker control, impact). A separate job with no
+   AI in it posts the result as a single PR comment that is updated on each push.
+   Claude gets read-only tools and a read-only token, and the comment never affects
+   the merge decision. Requires an `ANTHROPIC_API_KEY` repository secret; without
+   it, the comment lists the findings unranked.
+5. **Supply chain.** `pip-audit` checks dependencies against known CVEs and the
    job publishes a CycloneDX SBOM as a build artifact.
 
 ## Design notes
