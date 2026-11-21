@@ -1,0 +1,74 @@
+name: appsec
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # 1. The rules themselves are code: test them before they gate anyone.
+  rule-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install semgrep
+      - name: Run Semgrep rule tests (ruleid / ok annotations)
+        run: semgrep --test rules/
+
+  # 2. SAST: report everything, block only on new high-confidence findings.
+  sast:
+    needs: rule-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install semgrep
+
+      - name: Full scan (report only) -> SARIF
+        run: semgrep scan --config rules/ --exclude rules --sarif --output semgrep.sarif . || true
+
+      - name: Upload to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep-custom-rules
+
+      - name: Merge gate - fail only on NEW severity ERROR findings in this PR
+        if: github.event_name == 'pull_request'
+        run: |
+          semgrep scan --config rules/ --exclude rules \
+            --severity ERROR --error \
+            --baseline-commit "${{ github.event.pull_request.base.sha }}" .
+
+  # 3. Supply chain: dependency audit + SBOM.
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pip-audit
+      - name: Dependency audit (SCA, report only)
+        run: pip-audit -r demo-app/requirements.txt --no-deps --disable-pip --desc || true
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: demo-app
+          format: cyclonedx-json
+          artifact-name: sbom.cdx.json

@@ -1,0 +1,24 @@
+rules:
+  - id: flask-ssrf-requests
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: >-
+      User-controlled URL reaches an outbound HTTP request (SSRF). An attacker can
+      make the server call internal services or cloud metadata endpoints.
+      Pass the URL through validate_url() (host allowlist) first.
+    metadata:
+      cwe: "CWE-918: Server-Side Request Forgery (SSRF)"
+      owasp: "A10:2021 - Server-Side Request Forgery"
+      confidence: HIGH
+    pattern-sources:
+      - pattern: flask.request.$SRC.get(...)
+      - pattern: flask.request.$SRC[...]
+    pattern-sanitizers:
+      - pattern: validate_url(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: requests.$METHOD($URL, ...)
+              - pattern: urllib.request.urlopen($URL, ...)
+          - focus-metavariable: $URL

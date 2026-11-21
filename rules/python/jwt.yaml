@@ -1,0 +1,13 @@
+rules:
+  - id: jwt-signature-verification-disabled
+    languages: [python]
+    severity: ERROR
+    message: >-
+      JWT signature verification is disabled, so anyone can forge a token and
+      bypass authentication. Remove verify_signature=False and pass the key and
+      allowed algorithms.
+    metadata:
+      cwe: "CWE-347: Improper Verification of Cryptographic Signature"
+      owasp: "A07:2021 - Identification and Authentication Failures"
+      confidence: HIGH
+    pattern: 'jwt.decode(..., options={..., "verify_signature": False, ...}, ...)'

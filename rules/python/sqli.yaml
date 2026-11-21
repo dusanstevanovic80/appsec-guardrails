@@ -1,0 +1,19 @@
+rules:
+  - id: flask-sqli-string-built-query
+    mode: taint
+    languages: [python]
+    severity: ERROR
+    message: >-
+      User input is built into a SQL string passed to execute() (SQL injection).
+      Use a parameterized query: cursor.execute("... WHERE id = ?", (value,)).
+    metadata:
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+      confidence: HIGH
+    pattern-sources:
+      - pattern: flask.request.$SRC.get(...)
+      - pattern: flask.request.$SRC[...]
+    pattern-sinks:
+      - patterns:
+          - pattern: $CUR.execute($QUERY, ...)
+          - focus-metavariable: $QUERY

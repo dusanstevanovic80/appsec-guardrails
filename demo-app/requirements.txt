@@ -1,0 +1,5 @@
+# Old versions pinned on purpose so the dependency audit has findings.
+Flask==2.2.2
+requests==2.25.0
+PyYAML==5.3.1
+PyJWT==1.7.1
